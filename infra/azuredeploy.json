@@ -1,0 +1,109 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "logicAppName": {
+      "type": "string",
+      "defaultValue": "poc-order-notification"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "eastus2"
+    },
+    "highValueThreshold": {
+      "type": "int",
+      "defaultValue": 1000
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2019-05-01",
+      "name": "[parameters('logicAppName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "state": "Enabled",
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "HighValueThreshold": { "type": "int" }
+          },
+          "triggers": {
+            "When_an_order_is_submitted": {
+              "type": "Request",
+              "kind": "Http",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orderId": { "type": "string" },
+                    "customerName": { "type": "string" },
+                    "amount": { "type": "number" }
+                  },
+                  "required": ["orderId", "customerName", "amount"]
+                }
+              }
+            }
+          },
+          "actions": {
+            "Check_if_high_value_order": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "greaterOrEquals": [
+                      "@triggerBody()?['amount']",
+                      "@parameters('HighValueThreshold')"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Respond_high_value": {
+                  "type": "Response",
+                  "inputs": {
+                    "statusCode": 200,
+                    "body": {
+                      "message": "High value order received",
+                      "orderId": "@{triggerBody()?['orderId']}"
+                    }
+                  },
+                  "runAfter": {}
+                }
+              },
+              "else": {
+                "actions": {
+                  "Respond_standard": {
+                    "type": "Response",
+                    "inputs": {
+                      "statusCode": 200,
+                      "body": {
+                        "message": "Standard order received",
+                        "orderId": "@{triggerBody()?['orderId']}"
+                      }
+                    },
+                    "runAfter": {}
+                  }
+                }
+              },
+              "runAfter": {}
+            }
+          },
+          "outputs": {}
+        },
+        "parameters": {
+          "HighValueThreshold": {
+            "value": "[parameters('highValueThreshold')]"
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "logicAppTriggerUrl": {
+      "type": "string",
+      "value": "[listCallbackUrl(resourceId('Microsoft.Logic/workflows/triggers', parameters('logicAppName'), 'When_an_order_is_submitted'), '2019-05-01').value]"
+    }
+  }
+}
