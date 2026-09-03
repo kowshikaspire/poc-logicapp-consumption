@@ -12,7 +12,7 @@
     },
     "highValueThreshold": {
       "type": "int",
-      "defaultValue": 1000
+      "defaultValue": 1001
     }
   },
   "resources": [
