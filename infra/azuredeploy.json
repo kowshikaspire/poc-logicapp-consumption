@@ -1,109 +1,193 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
+
   "parameters": {
     "logicAppName": {
       "type": "string",
-      "defaultValue": "poc-order-notification"
+      "defaultValue": "employee-insert"
     },
+
     "location": {
       "type": "string",
       "defaultValue": "eastus2"
     },
-    "highValueThreshold": {
-      "type": "int",
-      "defaultValue": 1000
+
+    "sqlConnectionName": {
+      "type": "string",
+      "defaultValue": "sql-connection"
+    },
+
+    "sqlServer": {
+      "type": "string",
+      "defaultValue": "PLACEHOLDER_SERVER"
+    },
+
+    "sqlDatabase": {
+      "type": "string",
+      "defaultValue": "PLACEHOLDER_DATABASE"
+    },
+
+    "sqlUsername": {
+      "type": "string",
+      "defaultValue": "PLACEHOLDER_USERNAME"
+    },
+
+    "sqlPassword": {
+      "type": "securestring",
+      "defaultValue": "PLACEHOLDER_PASSWORD"
     }
   },
+
   "resources": [
+    {
+      "type": "Microsoft.Web/connections",
+      "apiVersion": "2016-06-01",
+      "name": "[parameters('sqlConnectionName')]",
+      "location": "[parameters('location')]",
+
+      "properties": {
+        "displayName": "[parameters('sqlConnectionName')]",
+
+        "api": {
+          "id": "[subscriptionResourceId('Microsoft.Web/locations/managedApis', parameters('location'), 'sql')]"
+        },
+
+        "parameterValues": {
+          "server": "[parameters('sqlServer')]",
+          "database": "[parameters('sqlDatabase')]",
+          "username": "[parameters('sqlUsername')]",
+          "password": "[parameters('sqlPassword')]"
+        }
+      }
+    },
     {
       "type": "Microsoft.Logic/workflows",
       "apiVersion": "2019-05-01",
       "name": "[parameters('logicAppName')]",
       "location": "[parameters('location')]",
+
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/connections', parameters('sqlConnectionName'))]"
+      ],
+
       "properties": {
         "state": "Enabled",
+
         "definition": {
           "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+
           "contentVersion": "1.0.0.0",
+
           "parameters": {
-            "HighValueThreshold": { "type": "int" }
+            "$connections": {
+              "type": "Object",
+              "defaultValue": {}
+            }
           },
+
           "triggers": {
-            "When_an_order_is_submitted": {
+            "When_employee_information_is_received": {
               "type": "Request",
               "kind": "Http",
+
               "inputs": {
                 "schema": {
                   "type": "object",
+
                   "properties": {
-                    "orderId": { "type": "string" },
-                    "customerName": { "type": "string" },
-                    "amount": { "type": "number" }
+                    "employeeId": {
+                      "type": "string"
+                    },
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "department": {
+                      "type": "string"
+                    }
                   },
-                  "required": ["orderId", "customerName", "amount"]
+
+                  "required": [
+                    "employeeId",
+                    "firstName",
+                    "lastName",
+                    "email",
+                    "department"
+                  ]
                 }
               }
             }
           },
+
           "actions": {
-            "Check_if_high_value_order": {
-              "type": "If",
-              "expression": {
-                "and": [
-                  {
-                    "greaterOrEquals": [
-                      "@triggerBody()?['amount']",
-                      "@parameters('HighValueThreshold')"
-                    ]
+            "Insert_employee_into_database": {
+              "type": "ApiConnection",
+
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['sql']['connectionId']"
                   }
-                ]
+                },
+
+                "method": "post",
+
+                "body": {
+                  "EmployeeId": "@triggerBody()?['employeeId']",
+                  "FirstName": "@triggerBody()?['firstName']",
+                  "LastName": "@triggerBody()?['lastName']",
+                  "Email": "@triggerBody()?['email']",
+                  "Department": "@triggerBody()?['department']"
+                },
+
+                "path": "/v2/datasets/@{encodeURIComponent(parameters('sqlServer'))},@{encodeURIComponent(parameters('sqlDatabase'))}/tables/@{encodeURIComponent('[dbo].[Employee]')}/items"
               },
-              "actions": {
-                "Respond_high_value": {
-                  "type": "Response",
-                  "inputs": {
-                    "statusCode": 200,
-                    "body": {
-                      "message": "High value order received",
-                      "orderId": "@{triggerBody()?['orderId']}"
-                    }
-                  },
-                  "runAfter": {}
-                }
-              },
-              "else": {
-                "actions": {
-                  "Respond_standard": {
-                    "type": "Response",
-                    "inputs": {
-                      "statusCode": 200,
-                      "body": {
-                        "message": "Standard order received",
-                        "orderId": "@{triggerBody()?['orderId']}"
-                      }
-                    },
-                    "runAfter": {}
-                  }
-                }
-              },
+
               "runAfter": {}
+            },
+
+            "Return_success_response": {
+              "type": "Response",
+
+              "inputs": {
+                "statusCode": 200,
+
+                "body": {
+                  "message": "Employee created successfully",
+                  "employeeId": "@triggerBody()?['employeeId']"
+                }
+              },
+
+              "runAfter": {
+                "Insert_employee_into_database": [
+                  "Succeeded"
+                ]
+              }
             }
           },
+
           "outputs": {}
         },
+
         "parameters": {
-          "HighValueThreshold": {
-            "value": "[parameters('highValueThreshold')]"
+          "$connections": {
+            "value": {
+              "sql": {
+                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('sqlConnectionName'))]",
+                "connectionName": "[parameters('sqlConnectionName')]",
+                "id": "[subscriptionResourceId('Microsoft.Web/locations/managedApis', parameters('location'), 'sql')]"
+              }
+            }
           }
         }
       }
     }
-  ],
-  "outputs": {
-    "logicAppTriggerUrl": {
-      "type": "string",
-      "value": "[listCallbackUrl(resourceId('Microsoft.Logic/workflows/triggers', parameters('logicAppName'), 'When_an_order_is_submitted'), '2019-05-01').value]"
-    }
-  }
+  ]
 }
+```
