@@ -178,6 +178,11 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
               connection: {
                 name: '@parameters(\'$connections\')[\'hrOutlookConnection\'][\'connectionId\']'
               }
+             retryPolicy: {
+                type: 'Exponential'
+                count: '@parameters(\'emailRetryCount\')'
+                interval: '@parameters(\'emailRetryMaximumInterval\')'
+              }
             }
             method: 'post'
             path: '/v2/Mail'
@@ -186,11 +191,6 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
               Subject: 'New employee added'
               Body: '@concat(\'<p>A new employee has been added.</p><p><strong>Name:</strong> \', string(body(\'Get_Employee_Details\')?[parameters(\'employeeNameColumn\')]), \'<br/><strong>Employee ID:</strong> \', string(body(\'Get_Employee_Details\')?[parameters(\'employeeIdColumn\')]), \'<br/><strong>Department:</strong> \', string(body(\'Get_Employee_Details\')?[parameters(\'departmentColumn\')]), \'<br/><strong>Joining Date:</strong> \', string(body(\'Get_Employee_Details\')?[parameters(\'joiningDateColumn\')]), \'</p>\')'
             }
-          }
-          retryPolicy: {
-            type: 'Exponential'
-            count: '@parameters(\'emailRetryCount\')'
-            interval: '@parameters(\'emailRetryMaximumInterval\')'
           }
         }
         Handle_Email_Failure: {
