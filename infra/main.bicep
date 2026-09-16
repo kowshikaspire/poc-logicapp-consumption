@@ -1,6 +1,6 @@
 targetScope = 'resourceGroup'
 
-@description('Name of the Consumption Logic App workflow.')
+@description('Name of the Consumption Logic App.')
 param logicAppName string
 
 @description('Azure region for the Logic App and managed API connections.')
