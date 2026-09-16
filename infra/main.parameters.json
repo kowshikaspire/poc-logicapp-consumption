@@ -17,10 +17,7 @@
       }
     },
     "outlookConnectionParameterValues": {
-      "value": {
-        "token:TenantId": "00000000-0000-0000-0000-000000000000",
-        "token:grantType": "client_credentials"
-      }
+      "value": {}
     },
     "sqlServerName": {
       "value": "dummy-sql-server.database.windows.net"
