@@ -1,0 +1,59 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "logicAppName": {
+      "value": "employee-sync-poc"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "sqlConnectionParameterValues": {
+      "value": {
+        "server": "dummy-sql-server.database.windows.net",
+        "database": "DummyEmployeeDB",
+        "username": "dummy-user",
+        "password": "dummy-password"
+      }
+    },
+    "outlookConnectionParameterValues": {
+      "value": {
+        "token:TenantId": "00000000-0000-0000-0000-000000000000",
+        "token:grantType": "client_credentials"
+      }
+    },
+    "sqlServerName": {
+      "value": "dummy-sql-server.database.windows.net"
+    },
+    "sqlDatabaseName": {
+      "value": "DummyEmployeeDB"
+    },
+    "sqlEmployeeTable": {
+      "value": "dbo.Employee"
+    },
+    "employeeIdentityColumn": {
+      "value": "ID"
+    },
+    "employeeNameColumn": {
+      "value": "Name"
+    },
+    "employeeIdColumn": {
+      "value": "EmployeeId"
+    },
+    "departmentColumn": {
+      "value": "Department"
+    },
+    "joiningDateColumn": {
+      "value": "JoiningDate"
+    },
+    "hrRecipientAddress": {
+      "value": "dummy@example.com"
+    },
+    "emailRetryCount": {
+      "value": 3
+    },
+    "emailRetryMaximumInterval": {
+      "value": "PT1M"
+    }
+  }
+}
