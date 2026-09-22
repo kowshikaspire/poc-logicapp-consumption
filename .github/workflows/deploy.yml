@@ -30,6 +30,6 @@ jobs:
       - name: Deploy Bicep template
         run: |
           az deployment group create \
-            --resource-group EIIM_Boomi \
+            --resource-group EIIM_Bo123456789 \
             --template-file infra/main.bicep \
             --parameters @infra/main.parameters.json
