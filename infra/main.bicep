@@ -57,12 +57,14 @@ var outlookApiId = subscriptionResourceId('Microsoft.Web/locations/managedApis',
 resource sqlConnection 'Microsoft.Web/connections@2016-06-01' = {
   name: sqlConnectionName
   location: location
+  kind: 'V1'
   properties: json('{"api":{"id":"${sqlApiId}"},"authenticatedUser":{},"connectionState":"Enabled","customParameterValues":{},"displayName":"${sqlConnectionName}","parameterValueSet":{"name":"managedIdentityAuth","values":{}}}')
 }
 
 resource serviceBusConnection 'Microsoft.Web/connections@2016-06-01' = {
   name: serviceBusConnectionName
   location: location
+  kind: 'V1'
   properties: json('{"api":{"id":"${serviceBusApiId}"},"authenticatedUser":{},"connectionState":"Enabled","customParameterValues":{},"displayName":"${serviceBusConnectionName}","parameterValueSet":{"name":"managedIdentityAuth","values":{"namespaceEndpoint":"sb://${serviceBusNamespace}.servicebus.windows.net/"}}}')
 }
 
