@@ -47,7 +47,7 @@
       "value": "PT24H"
     },
     "office365ConnectionAuthorization": {
-      "value": {}
+      "value": "PLACEHOLDER_NOT_A_REAL_TOKEN"
     }
   }
 }
