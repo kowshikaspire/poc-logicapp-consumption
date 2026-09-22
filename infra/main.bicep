@@ -120,7 +120,7 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
           type: 'SecureString'
         }
         approvalThreshold: {
-          type: 'Integer'
+          type: 'int'
         }
         approvalTimeout: {
           type: 'String'
