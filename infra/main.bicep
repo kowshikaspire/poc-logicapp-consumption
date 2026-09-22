@@ -120,7 +120,7 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
           type: 'SecureString'
         }
         approvalThreshold: {
-          type: 'Int'
+          type: 'Integer'
         }
         approvalTimeout: {
           type: 'String'
@@ -330,11 +330,11 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
                   '$filter': '''@concat('VendorId eq ', decodeUriComponent('%27'), triggerBody()?['VendorId'], decodeUriComponent('%27'))'''
                   '$top': 1
                 }
-              }
-              retryPolicy: {
-                type: 'exponential'
-                count: 4
-                interval: 'PT5S'
+                retryPolicy: {
+                  type: 'exponential'
+                  count: 4
+                  interval: 'PT5S'
+                }
               }
               runAfter: {
                 Calculate_order_total: [
@@ -390,12 +390,14 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
                           SelectionText: 'Select Approve or Reject'
                           Body: '''@concat('Order: ', triggerBody()?['OrderId'], '<br/>Vendor: ', triggerBody()?['VendorId'], '<br/>Total: ', string(variables('orderTotal')), ' ', triggerBody()?['Currency'])'''
                         }
+                        retryPolicy: {
+                          type: 'fixed'
+                          count: 3
+                          interval: 'PT10S'
+                        }
                       }
-                      limit: '''@parameters('approvalTimeout')'''
-                      retryPolicy: {
-                        type: 'fixed'
-                        count: 3
-                        interval: 'PT10S'
+                      limit: {
+                        timeout: '''@parameters('approvalTimeout')'''
                       }
                       runAfter: {}
                     }
@@ -446,11 +448,11 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
                           '$filter': '''@concat('OrderId eq ', decodeUriComponent('%27'), triggerBody()?['OrderId'], decodeUriComponent('%27'))'''
                           '$top': 1
                         }
-                      }
-                      retryPolicy: {
-                        type: 'exponential'
-                        count: 4
-                        interval: 'PT5S'
+                        retryPolicy: {
+                          type: 'exponential'
+                          count: 4
+                          interval: 'PT5S'
+                        }
                       }
                       runAfter: {}
                     }
@@ -486,11 +488,11 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
                               Subject: '''@concat('Purchase order duplicate: ', triggerBody()?['OrderId'])'''
                               Body: '''@concat('Purchase order ', triggerBody()?['OrderId'], ' was already processed. Final status: Duplicate.')'''
                             }
-                          }
-                          retryPolicy: {
-                            type: 'fixed'
-                            count: 3
-                            interval: 'PT10S'
+                            retryPolicy: {
+                              type: 'fixed'
+                              count: 3
+                              interval: 'PT10S'
+                            }
                           }
                           runAfter: {
                             Set_duplicate_status: [
@@ -519,11 +521,11 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
                                 Total: '''@variables('orderTotal')'''
                                 Status: 'Approved'
                               }
-                            }
-                            retryPolicy: {
-                              type: 'exponential'
-                              count: 4
-                              interval: 'PT5S'
+                              retryPolicy: {
+                                type: 'exponential'
+                                count: 4
+                                interval: 'PT5S'
+                              }
                             }
                             runAfter: {}
                           }
@@ -548,11 +550,11 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
                                     Quantity: '''@items('Insert_order_lines')?['Quantity']'''
                                     UnitPrice: '''@items('Insert_order_lines')?['UnitPrice']'''
                                   }
-                                }
-                                retryPolicy: {
-                                  type: 'exponential'
-                                  count: 4
-                                  interval: 'PT5S'
+                                  retryPolicy: {
+                                    type: 'exponential'
+                                    count: 4
+                                    interval: 'PT5S'
+                                  }
                                 }
                                 runAfter: {}
                               }
@@ -578,11 +580,11 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
                                 ContentType: 'application/json'
                                 MessageId: '''@triggerBody()?['OrderId']'''
                               }
-                            }
-                            retryPolicy: {
-                              type: 'exponential'
-                              count: 4
-                              interval: 'PT5S'
+                              retryPolicy: {
+                                type: 'exponential'
+                                count: 4
+                                interval: 'PT5S'
+                              }
                             }
                             runAfter: {
                               Insert_order_lines: [
@@ -617,11 +619,11 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
                                 Subject: '''@concat('Purchase order approved: ', triggerBody()?['OrderId'])'''
                                 Body: '''@concat('Purchase order ', triggerBody()?['OrderId'], ' is approved. Total: ', string(variables('orderTotal')), ' ', triggerBody()?['Currency'], '. Final status: ', variables('processingStatus'), '.')'''
                               }
-                            }
-                            retryPolicy: {
-                              type: 'fixed'
-                              count: 3
-                              interval: 'PT10S'
+                              retryPolicy: {
+                                type: 'fixed'
+                                count: 3
+                                interval: 'PT10S'
+                              }
                             }
                             runAfter: {
                               Set_approved_status: [
@@ -663,11 +665,11 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
                             Subject: '''@concat('Purchase order not approved: ', triggerBody()?['OrderId'])'''
                             Body: '''@concat('Purchase order ', triggerBody()?['OrderId'], ' was not approved. Final status: ', variables('processingStatus'), '.')'''
                           }
-                        }
-                        retryPolicy: {
-                          type: 'fixed'
-                          count: 3
-                          interval: 'PT10S'
+                          retryPolicy: {
+                            type: 'fixed'
+                            count: 3
+                            interval: 'PT10S'
+                          }
                         }
                         runAfter: {
                           Set_unapproved_status: [
@@ -679,10 +681,6 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
                         type: 'Terminate'
                         inputs: {
                           runStatus: 'Succeeded'
-                          runError: {
-                            code: 'PurchaseOrderNotApproved'
-                            message: 'The purchase order was rejected or approval timed out.'
-                          }
                         }
                         runAfter: {
                           Notify_unapproved_order: [
@@ -724,11 +722,11 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
                         Subject: '''@concat('Purchase order rejected: ', triggerBody()?['OrderId'])'''
                         Body: '''@concat('Purchase order ', triggerBody()?['OrderId'], ' was rejected because vendor ', triggerBody()?['VendorId'], ' does not exist or is inactive.')'''
                       }
-                    }
-                    retryPolicy: {
-                      type: 'fixed'
-                      count: 3
-                      interval: 'PT10S'
+                      retryPolicy: {
+                        type: 'fixed'
+                        count: 3
+                        interval: 'PT10S'
+                      }
                     }
                     runAfter: {
                       Set_invalid_vendor_status: [
@@ -740,10 +738,6 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
                     type: 'Terminate'
                     inputs: {
                       runStatus: 'Succeeded'
-                      runError: {
-                        code: 'InvalidVendor'
-                        message: 'The vendor does not exist or is inactive.'
-                      }
                     }
                     runAfter: {
                       Notify_invalid_vendor: [
@@ -792,11 +786,11 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
                   ErrorMessage: '''@variables('errorMessage')'''
                   RunId: '''@workflow().run.id'''
                 }
-              }
-              retryPolicy: {
-                type: 'exponential'
-                count: 4
-                interval: 'PT5S'
+                retryPolicy: {
+                  type: 'exponential'
+                  count: 4
+                  interval: 'PT5S'
+                }
               }
               runAfter: {
                 Set_error_context: [
@@ -819,11 +813,11 @@ resource purchaseOrderProcessing 'Microsoft.Logic/workflows@2019-05-01' = {
                   Subject: '''@concat('Purchase order processing failure: ', triggerBody()?['OrderId'])'''
                   Body: '''@concat('OrderId: ', triggerBody()?['OrderId'], '<br/>RunId: ', workflow().run.id, '<br/>Error: ', variables('errorMessage'))'''
                 }
-              }
-              retryPolicy: {
-                type: 'fixed'
-                count: 3
-                interval: 'PT10S'
+                retryPolicy: {
+                  type: 'fixed'
+                  count: 3
+                  interval: 'PT10S'
+                }
               }
               runAfter: {
                 Log_processing_failure: [
