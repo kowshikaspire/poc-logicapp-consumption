@@ -59,7 +59,7 @@ resource sqlConnection 'Microsoft.Web/connections@2016-06-01' = {
   location: location
   #disable-next-line BCP187
   kind: 'V1'
-  properties: json('{"api":{"id":"${sqlApiId}"},"authenticatedUser":{},"connectionState":"Enabled","customParameterValues":{},"displayName":"${sqlConnectionName}","parameterValueSet":{"name":"managedIdentityAuth","values":{}}}')
+  properties: json('{"api":{"id":"${sqlApiId}"},"authenticatedUser":{},"connectionState":"Enabled","customParameterValues":{},"displayName":"${sqlConnectionName}","parameterValueSet":{"name":"oauthMI","values":{}}}')
 }
 
 resource serviceBusConnection 'Microsoft.Web/connections@2016-06-01' = {
