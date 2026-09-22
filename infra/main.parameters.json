@@ -3,54 +3,51 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "logicAppName": {
-      "value": "employee-sync-poc"
+      "value": "PurchaseOrderProcessing"
     },
     "location": {
-      "value": "eastus2"
-    },
-    "sqlConnectionParameterValues": {
-      "value": {
-        "server": "dummy-sql-server.database.windows.net",
-        "database": "DummyEmployeeDB",
-        "username": "dummy-user",
-        "password": "dummy-password"
-      }
-    },
-    "outlookConnectionParameterValues": {
-      "value": {}
+      "value": "eastus"
     },
     "sqlServerName": {
-      "value": "dummy-sql-server.database.windows.net"
+      "value": "poc-purchaseorder-sql"
     },
     "sqlDatabaseName": {
-      "value": "DummyEmployeeDB"
+      "value": "PurchaseOrderDb"
     },
-    "sqlEmployeeTable": {
-      "value": "dbo.Employee"
+    "vendorsTableName": {
+      "value": "dbo.Vendors"
     },
-    "employeeIdentityColumn": {
-      "value": "ID"
+    "orderHeaderTableName": {
+      "value": "dbo.OrderHeader"
     },
-    "employeeNameColumn": {
-      "value": "Name"
+    "orderLineTableName": {
+      "value": "dbo.OrderLine"
     },
-    "employeeIdColumn": {
-      "value": "EmployeeId"
+    "errorLogTableName": {
+      "value": "ErrorLog"
     },
-    "departmentColumn": {
-      "value": "Department"
+    "serviceBusNamespace": {
+      "value": "poc-purchaseorder-sb"
     },
-    "joiningDateColumn": {
-      "value": "JoiningDate"
+    "fulfilmentQueueName": {
+      "value": "orders-to-fulfil"
     },
-    "hrRecipientAddress": {
-      "value": "dummy@example.com"
+    "supportTeamEmail": {
+      "value": "support-team@contoso.com"
     },
-    "emailRetryCount": {
-      "value": 3
+    "procurementIpRanges": {
+      "value": [
+        "203.0.113.0/24"
+      ]
     },
-    "emailRetryMaximumInterval": {
-      "value": "PT1M"
+    "approvalThreshold": {
+      "value": 10000
+    },
+    "approvalTimeout": {
+      "value": "PT24H"
+    },
+    "office365ConnectionAuthorization": {
+      "value": {}
     }
   }
 }
