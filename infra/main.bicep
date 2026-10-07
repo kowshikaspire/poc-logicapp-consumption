@@ -47,7 +47,7 @@ param approvalTimeout string = 'PT24H'
 @description('Deployment-time OAuth authorization value for the new Outlook API connection.')
 param office365ConnectionAuthorization string
 
-var sqlConnectionName = 'purchaseOrderSql'
+var sqlConnectionName = 'poOrderSql'
 var serviceBusConnectionName = 'purchaseOrderServiceBus'
 var outlookConnectionName = 'purchaseOrderOutlook'
 var sqlApiId = subscriptionResourceId('Microsoft.Web/locations/managedApis', location, 'sql')
