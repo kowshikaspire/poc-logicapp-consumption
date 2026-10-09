@@ -167,18 +167,16 @@
             "path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent('default'))}/query/sql",
             "body": {
               "query": "SELECT Region, SalesAmount, Orders FROM dbo.DailySalesSummary WHERE [Date] = '@{outputs('ComputeReportDate')}'"
-            }
-          },
-          "runAfter": {},
-          "runtimeConfiguration": {
-            "retryPolicy": {
+            },
+			"retryPolicy": {
               "type": "exponential",
               "count": 4,
               "interval": "PT7S",
               "minimumInterval": "PT5S",
               "maximumInterval": "PT45S"
             }
-          }
+          },
+          "runAfter": {}
         },
         "SqlQuery_RegionSalesTargetLookup": {
           "type": "ApiConnection",
@@ -192,18 +190,16 @@
             "path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent('default'))}/query/sql",
             "body": {
               "query": "SELECT Region, TargetAmount FROM dbo.RegionSalesTargetLookup WHERE IsActive = 1"
-            }
-          },
-          "runAfter": {},
-          "runtimeConfiguration": {
-            "retryPolicy": {
+            },
+			  "retryPolicy": {
               "type": "exponential",
               "count": 4,
               "interval": "PT7S",
               "minimumInterval": "PT5S",
               "maximumInterval": "PT45S"
             }
-          }
+          },
+          "runAfter": {}
         }
       },
       "runAfter": {
@@ -421,21 +417,19 @@
                 "Body": "@{outputs('BuildReportTableHtml')}",
                 "From": "@parameters('senderMailbox')",
                 "IsHtml": true
-              }
-            },
-            "runAfter": {
-              "ComposeReportSubject": [
-                "Succeeded"
-              ]
-            },
-            "runtimeConfiguration": {
-              "retryPolicy": {
+              },
+			   "retryPolicy": {
                 "type": "exponential",
                 "count": 4,
                 "interval": "PT7S",
                 "minimumInterval": "PT5S",
                 "maximumInterval": "PT45S"
               }
+            },
+            "runAfter": {
+              "ComposeReportSubject": [
+                "Succeeded"
+              ]
             }
           }
         }
@@ -475,18 +469,16 @@
                 "path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent('default'))}/query/sql",
                 "body": {
                   "query": "INSERT INTO dbo.IntegrationErrorLog (IntegrationName, RunId, ReportDate, FailedAction, ErrorMessage, LoggedAtUtc) VALUES ('@{outputs('ComposeErrorContext')?['IntegrationName']}', '@{outputs('ComposeErrorContext')?['RunId']}', '@{outputs('ComposeErrorContext')?['ReportDate']}', '@{outputs('ComposeErrorContext')?['FailedAction']}', '@{outputs('ComposeErrorContext')?['ErrorMessage']}', '@{utcNow()}')"
-                }
-              },
-              "runAfter": {},
-              "runtimeConfiguration": {
-                "retryPolicy": {
+                },
+				"retryPolicy": {
                   "type": "exponential",
                   "count": 4,
                   "interval": "PT7S",
                   "minimumInterval": "PT5S",
                   "maximumInterval": "PT45S"
                 }
-              }
+              },
+              "runAfter": {}
             }
           },
           "runAfter": {
@@ -554,4 +546,3 @@
   },
   "outputs": {}
 }
-
