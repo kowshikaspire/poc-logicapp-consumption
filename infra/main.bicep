@@ -1,7 +1,7 @@
 targetScope = 'resourceGroup'
 
 @description('Name of the PurchaseOrderProcessing Logic App.')
-param logicAppName string = 'PurchaseOrderProcessing'
+param logicAppName string = 'PurchaseOrderProcessin'
 
 @description('Azure region for the workflow and API connections.')
 param location string = resourceGroup().location
