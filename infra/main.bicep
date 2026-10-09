@@ -71,11 +71,6 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
             connectionId: sqlConnection.id
             connectionName: sqlConnectionName
             id: subscriptionResourceId('Microsoft.Web/locations/managedApis', location, 'sql')
-            connectionProperties: {
-              authentication: {
-                type: 'Raw'
-              }
-            }
           }
           office365: {
             connectionId: outlookConnection.id
