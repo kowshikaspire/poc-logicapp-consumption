@@ -11,6 +11,9 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  RESOURCE_GROUP: EIIM_Bo12345678
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -18,6 +21,14 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+
+      - name: Validate JSON files
+        run: |
+          jq empty infra/main.parameters.json
+          jq empty infra/DailySalesReport.workflow.json
+
+      - name: Build Bicep
+        run: az bicep build --file infra/main.bicep --stdout > /dev/null
 
       - name: Azure Login (OIDC)
         uses: azure/login@v2
@@ -27,9 +38,17 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           allow-no-subscriptions: true
 
+      - name: Validate deployment
+        run: |
+          az deployment group validate \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file infra/main.bicep \
+            --parameters @infra/main.parameters.json
+
       - name: Deploy Bicep template
         run: |
           az deployment group create \
-            --resource-group EIIM_Bo12345678 \
+            --name "dailysalesreport-${{ github.run_number }}" \
+            --resource-group "$RESOURCE_GROUP" \
             --template-file infra/main.bicep \
             --parameters @infra/main.parameters.json
