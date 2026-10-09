@@ -1,1 +1,557 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$connections": {
+      "defaultValue": {},
+      "type": "Object"
+    },
+    "salesDistributionListEmail": {
+      "defaultValue": "",
+      "type": "String"
+    },
+    "technicalAlertEmail": {
+      "defaultValue": "",
+      "type": "String"
+    },
+    "senderMailbox": {
+      "defaultValue": "",
+      "type": "String"
+    }
+  },
+  "triggers": {
+    "Recurrence_DailySalesReport": {
+      "type": "Recurrence",
+      "recurrence": {
+        "frequency": "Week",
+        "interval": 1,
+        "schedule": {
+          "weekDays": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday"
+          ],
+          "hours": [
+            8
+          ],
+          "minutes": [
+            0
+          ]
+        },
+        "timeZone": "India Standard Time"
+      }
+    }
+  },
+  "actions": {
+    "ComputeReportDate": {
+      "type": "Compose",
+      "inputs": "@formatDateTime(if(equals(dayOfWeek(convertTimeZone(utcNow(), 'UTC', 'India Standard Time')), 1), addDays(convertTimeZone(utcNow(), 'UTC', 'India Standard Time'), -3), if(equals(dayOfWeek(convertTimeZone(utcNow(), 'UTC', 'India Standard Time')), 0), addDays(convertTimeZone(utcNow(), 'UTC', 'India Standard Time'), -2), addDays(convertTimeZone(utcNow(), 'UTC', 'India Standard Time'), -1))), 'yyyy-MM-dd')",
+      "runAfter": {}
+    },
+    "InitializeRunId": {
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "RunId",
+            "type": "string",
+            "value": "@{workflow().run.name}"
+          }
+        ]
+      },
+      "runAfter": {
+        "ComputeReportDate": [
+          "Succeeded"
+        ]
+      }
+    },
+    "InitializeTotalSales": {
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "TotalSales",
+            "type": "float",
+            "value": 0
+          }
+        ]
+      },
+      "runAfter": {
+        "InitializeRunId": [
+          "Succeeded"
+        ]
+      }
+    },
+    "InitializeTotalTarget": {
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "TotalTarget",
+            "type": "float",
+            "value": 0
+          }
+        ]
+      },
+      "runAfter": {
+        "InitializeTotalSales": [
+          "Succeeded"
+        ]
+      }
+    },
+    "InitializeHasCritical": {
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "HasCritical",
+            "type": "boolean",
+            "value": false
+          }
+        ]
+      },
+      "runAfter": {
+        "InitializeTotalTarget": [
+          "Succeeded"
+        ]
+      }
+    },
+    "InitializeOverallAchievementPct": {
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "OverallAchievementPct",
+            "type": "float",
+            "value": 0
+          }
+        ]
+      },
+      "runAfter": {
+        "InitializeHasCritical": [
+          "Succeeded"
+        ]
+      }
+    },
+    "InitializeRegionMetrics": {
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "RegionMetrics",
+            "type": "array",
+            "value": []
+          }
+        ]
+      },
+      "runAfter": {
+        "InitializeOverallAchievementPct": [
+          "Succeeded"
+        ]
+      }
+    },
+    "SqlOperations": {
+      "type": "Scope",
+      "actions": {
+        "SqlQuery_DailySalesSummary": {
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['sql']['connectionId']"
+              }
+            },
+            "method": "post",
+            "path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent('default'))}/query/sql",
+            "body": {
+              "query": "SELECT Region, SalesAmount, Orders FROM dbo.DailySalesSummary WHERE [Date] = '@{outputs('ComputeReportDate')}'"
+            }
+          },
+          "runAfter": {},
+          "runtimeConfiguration": {
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 4,
+              "interval": "PT7S",
+              "minimumInterval": "PT5S",
+              "maximumInterval": "PT45S"
+            }
+          }
+        },
+        "SqlQuery_RegionSalesTargetLookup": {
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['sql']['connectionId']"
+              }
+            },
+            "method": "post",
+            "path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent('default'))}/query/sql",
+            "body": {
+              "query": "SELECT Region, TargetAmount FROM dbo.RegionSalesTargetLookup WHERE IsActive = 1"
+            }
+          },
+          "runAfter": {},
+          "runtimeConfiguration": {
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 4,
+              "interval": "PT7S",
+              "minimumInterval": "PT5S",
+              "maximumInterval": "PT45S"
+            }
+          }
+        }
+      },
+      "runAfter": {
+        "InitializeRegionMetrics": [
+          "Succeeded"
+        ]
+      }
+    },
+    "Condition_NoSalesCheck": {
+      "type": "If",
+      "expression": {
+        "and": [
+          {
+            "equals": [
+              "@length(body('SqlQuery_DailySalesSummary')?['resultsets']?['Table1'])",
+              0
+            ]
+          }
+        ]
+      },
+      "actions": {
+        "ComposeNoSalesEmailBody": {
+          "type": "Compose",
+          "inputs": "No sales recorded for @{outputs('ComputeReportDate')}",
+          "runAfter": {}
+        },
+        "SendEmail_NoSalesAlert": {
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['office365']['connectionId']"
+              }
+            },
+            "method": "post",
+            "path": "/v2/Mail",
+            "body": {
+              "To": "@parameters('salesDistributionListEmail')",
+              "Subject": "Daily Sales Report – @{outputs('ComputeReportDate')}",
+              "Body": "@{outputs('ComposeNoSalesEmailBody')}",
+              "From": "@parameters('senderMailbox')"
+            }
+          },
+          "runAfter": {
+            "ComposeNoSalesEmailBody": [
+              "Succeeded"
+            ]
+          }
+        }
+      },
+      "else": {
+        "actions": {
+          "ForEach_Region": {
+            "type": "Foreach",
+            "foreach": "@body('SqlQuery_DailySalesSummary')?['resultsets']?['Table1']",
+            "actions": {
+              "FindMatchingTarget": {
+                "type": "Compose",
+                "inputs": "@first(filter(body('SqlQuery_RegionSalesTargetLookup')?['resultsets']?['Table1'], item => equals(item?['Region'], items('ForEach_Region')?['Region'])))",
+                "runAfter": {}
+              },
+              "ComputeRegionMetrics": {
+                "type": "Compose",
+                "inputs": {
+                  "Region": "@items('ForEach_Region')?['Region']",
+                  "SalesAmount": "@items('ForEach_Region')?['SalesAmount']",
+                  "TargetAmount": "@outputs('FindMatchingTarget')?['TargetAmount']",
+                  "VariancePct": "@div(mul(sub(items('ForEach_Region')?['SalesAmount'], outputs('FindMatchingTarget')?['TargetAmount']), 100), outputs('FindMatchingTarget')?['TargetAmount'])",
+                  "AchievementPct": "@div(mul(items('ForEach_Region')?['SalesAmount'], 100), outputs('FindMatchingTarget')?['TargetAmount'])"
+                },
+                "runAfter": {
+                  "FindMatchingTarget": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "DetermineRegionStatus": {
+                "type": "Compose",
+                "inputs": "@if(less(outputs('ComputeRegionMetrics')?['AchievementPct'], 70), 'Critical', if(less(outputs('ComputeRegionMetrics')?['AchievementPct'], 90), 'Below Target', if(less(outputs('ComputeRegionMetrics')?['AchievementPct'], 100), 'Near Target', 'Target Met')))",
+                "runAfter": {
+                  "ComputeRegionMetrics": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "UpdateHasCritical": {
+                "type": "If",
+                "expression": {
+                  "and": [
+                    {
+                      "equals": [
+                        "@outputs('DetermineRegionStatus')",
+                        "Critical"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "SetHasCriticalTrue": {
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "HasCritical",
+                      "value": true
+                    },
+                    "runAfter": {}
+                  }
+                },
+                "else": {
+                  "actions": {}
+                },
+                "runAfter": {
+                  "DetermineRegionStatus": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "AppendRegionMetric": {
+                "type": "AppendToArrayVariable",
+                "inputs": {
+                  "name": "RegionMetrics",
+                  "value": {
+                    "Region": "@items('ForEach_Region')?['Region']",
+                    "SalesAmount": "@items('ForEach_Region')?['SalesAmount']",
+                    "TargetAmount": "@outputs('FindMatchingTarget')?['TargetAmount']",
+                    "AchievementPct": "@outputs('ComputeRegionMetrics')?['AchievementPct']",
+                    "VariancePct": "@outputs('ComputeRegionMetrics')?['VariancePct']",
+                    "Status": "@outputs('DetermineRegionStatus')"
+                  }
+                },
+                "runAfter": {
+                  "UpdateHasCritical": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "IncrementTotalSales": {
+                "type": "IncrementVariable",
+                "inputs": {
+                  "name": "TotalSales",
+                  "value": "@items('ForEach_Region')?['SalesAmount']"
+                },
+                "runAfter": {
+                  "AppendRegionMetric": [
+                    "Succeeded"
+                  ]
+                }
+              },
+              "IncrementTotalTarget": {
+                "type": "IncrementVariable",
+                "inputs": {
+                  "name": "TotalTarget",
+                  "value": "@outputs('FindMatchingTarget')?['TargetAmount']"
+                },
+                "runAfter": {
+                  "IncrementTotalSales": [
+                    "Succeeded"
+                  ]
+                }
+              }
+            },
+            "runAfter": {}
+          },
+          "ComputeOverallAchievement": {
+            "type": "SetVariable",
+            "inputs": {
+              "name": "OverallAchievementPct",
+              "value": "@div(mul(variables('TotalSales'), 100), variables('TotalTarget'))"
+            },
+            "runAfter": {
+              "ForEach_Region": [
+                "Succeeded"
+              ]
+            }
+          },
+          "BuildReportTableHtml": {
+            "type": "Compose",
+            "inputs": "@{concat('<html><body><h3>Daily Sales Report – ', outputs('ComputeReportDate'), ' (Overall Achievement: ', string(variables('OverallAchievementPct')), '%)</h3><table border=\"1\"><tr><th>Region</th><th>Sales ($)</th><th>Target ($)</th><th>Achievement %</th><th>Variance %</th><th>Status</th></tr>', join(select(sort(variables('RegionMetrics'), item => item?['Region']), item => concat('<tr', if(equals(item?['Status'], 'Critical'), ' style=\"background-color:red\"', ''), '><td>', item?['Region'], '</td><td>$', formatNumber(float(item?['SalesAmount']), 'N2'), '</td><td>$', formatNumber(float(item?['TargetAmount']), 'N2'), '</td><td>', formatNumber(float(item?['AchievementPct']), 'N2'), '%</td><td>', formatNumber(float(item?['VariancePct']), 'N2'), '%</td><td>', item?['Status'], '</td></tr>')), ''), '</table></body></html>')}",
+            "runAfter": {
+              "ComputeOverallAchievement": [
+                "Succeeded"
+              ]
+            }
+          },
+          "EvaluateCriticalPresence": {
+            "type": "Compose",
+            "inputs": "@variables('HasCritical')",
+            "runAfter": {
+              "BuildReportTableHtml": [
+                "Succeeded"
+              ]
+            }
+          },
+          "ComposeReportSubject": {
+            "type": "Compose",
+            "inputs": "@if(equals(outputs('EvaluateCriticalPresence'), true), concat('Daily Sales Report – ', outputs('ComputeReportDate'), ' – Attention Required'), concat('Daily Sales Report – ', outputs('ComputeReportDate')))",
+            "runAfter": {
+              "EvaluateCriticalPresence": [
+                "Succeeded"
+              ]
+            }
+          },
+          "SendEmail_SalesReport": {
+            "type": "ApiConnection",
+            "inputs": {
+              "host": {
+                "connection": {
+                  "name": "@parameters('$connections')['office365']['connectionId']"
+                }
+              },
+              "method": "post",
+              "path": "/v2/Mail",
+              "body": {
+                "To": "@parameters('salesDistributionListEmail')",
+                "Subject": "@{outputs('ComposeReportSubject')}",
+                "Body": "@{outputs('BuildReportTableHtml')}",
+                "From": "@parameters('senderMailbox')",
+                "IsHtml": true
+              }
+            },
+            "runAfter": {
+              "ComposeReportSubject": [
+                "Succeeded"
+              ]
+            },
+            "runtimeConfiguration": {
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 4,
+                "interval": "PT7S",
+                "minimumInterval": "PT5S",
+                "maximumInterval": "PT45S"
+              }
+            }
+          }
+        }
+      },
+      "runAfter": {
+        "SqlOperations": [
+          "Succeeded"
+        ]
+      }
+    },
+    "ErrorHandling": {
+      "type": "Scope",
+      "actions": {
+        "ComposeErrorContext": {
+          "type": "Compose",
+          "inputs": {
+            "IntegrationName": "DailySalesReport",
+            "RunId": "@variables('RunId')",
+            "ReportDate": "@outputs('ComputeReportDate')",
+            "FailedAction": "@if(equals(result('SqlOperations')?['status'], 'Failed'), 'SqlOperations', 'SendEmail_SalesReport')",
+            "ErrorMessage": "@if(equals(result('SqlOperations')?['status'], 'Failed'), string(result('SqlOperations')), string(actions('Condition_NoSalesCheck')?['error']))"
+          },
+          "runAfter": {}
+        },
+        "SqlOperations_Persist": {
+          "type": "Scope",
+          "actions": {
+            "SqlInsert_IntegrationErrorLog": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['sql']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent('default'))}/query/sql",
+                "body": {
+                  "query": "INSERT INTO dbo.IntegrationErrorLog (IntegrationName, RunId, ReportDate, FailedAction, ErrorMessage, LoggedAtUtc) VALUES ('@{outputs('ComposeErrorContext')?['IntegrationName']}', '@{outputs('ComposeErrorContext')?['RunId']}', '@{outputs('ComposeErrorContext')?['ReportDate']}', '@{outputs('ComposeErrorContext')?['FailedAction']}', '@{outputs('ComposeErrorContext')?['ErrorMessage']}', '@{utcNow()}')"
+                }
+              },
+              "runAfter": {},
+              "runtimeConfiguration": {
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 4,
+                  "interval": "PT7S",
+                  "minimumInterval": "PT5S",
+                  "maximumInterval": "PT45S"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "ComposeErrorContext": [
+              "Succeeded"
+            ]
+          }
+        },
+        "SendEmail_TechnicalAlert": {
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['office365']['connectionId']"
+              }
+            },
+            "method": "post",
+            "path": "/v2/Mail",
+            "body": {
+              "To": "@parameters('technicalAlertEmail')",
+              "Subject": "Technical Alert: DailySalesReport Failure – @{outputs('ComputeReportDate')}",
+              "Body": "@{concat('IntegrationName: ', outputs('ComposeErrorContext')?['IntegrationName'], '<br/>ReportDate: ', outputs('ComposeErrorContext')?['ReportDate'], '<br/>FailedAction: ', outputs('ComposeErrorContext')?['FailedAction'], '<br/>ErrorMessage: ', outputs('ComposeErrorContext')?['ErrorMessage'], '<br/>RunId: ', outputs('ComposeErrorContext')?['RunId'])}",
+              "From": "@parameters('senderMailbox')",
+              "IsHtml": true
+            }
+          },
+          "runAfter": {
+            "SqlOperations_Persist": [
+              "Succeeded",
+              "Failed",
+              "Skipped",
+              "TimedOut"
+            ]
+          }
+        },
+        "TerminateRunFailed": {
+          "type": "Terminate",
+          "inputs": {
+            "runStatus": "Failed",
+            "runError": {
+              "code": "IntegrationErrorLogPersistenceFailed",
+              "message": "@{concat('Failed to persist error log for RunId: ', outputs('ComposeErrorContext')?['RunId'])}"
+            }
+          },
+          "runAfter": {
+            "SqlOperations_Persist": [
+              "Failed"
+            ]
+          }
+        }
+      },
+      "runAfter": {
+        "SqlOperations": [
+          "Failed",
+          "Skipped",
+          "TimedOut"
+        ],
+        "Condition_NoSalesCheck": [
+          "Failed",
+          "Skipped",
+          "TimedOut"
+        ]
+      }
+    }
+  },
+  "outputs": {}
+}
 
