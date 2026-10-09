@@ -374,15 +374,27 @@
               ]
             }
           },
-          "BuildReportTableHtml": {
-            "type": "Compose",
-            "inputs": "@{concat('<html><body><h3>Daily Sales Report – ', outputs('ComputeReportDate'), ' (Overall Achievement: ', string(variables('OverallAchievementPct')), '%)</h3><table border=\"1\"><tr><th>Region</th><th>Sales ($)</th><th>Target ($)</th><th>Achievement %</th><th>Variance %</th><th>Status</th></tr>', join(select(sort(variables('RegionMetrics'), item => item?['Region']), item => concat('<tr', if(equals(item?['Status'], 'Critical'), ' style=\"background-color:red\"', ''), '><td>', item?['Region'], '</td><td>$', formatNumber(float(item?['SalesAmount']), 'N2'), '</td><td>$', formatNumber(float(item?['TargetAmount']), 'N2'), '</td><td>', formatNumber(float(item?['AchievementPct']), 'N2'), '%</td><td>', formatNumber(float(item?['VariancePct']), 'N2'), '%</td><td>', item?['Status'], '</td></tr>')), ''), '</table></body></html>')}",
-            "runAfter": {
-              "ComputeOverallAchievement": [
-                "Succeeded"
-              ]
-            }
-          },
+          "SelectReportRows": {
+			  "type": "Select",
+			  "inputs": {
+				"from": "@sort(variables('RegionMetrics'), 'Region')",
+				"select": "@concat('<tr', if(equals(item()?['Status'], 'Critical'), ' style=\"background-color:red;color:white\"', ''), '><td>', item()?['Region'], '</td><td>$', formatNumber(float(item()?['SalesAmount']), 'N2'), '</td><td>$', formatNumber(float(item()?['TargetAmount']), 'N2'), '</td><td>', formatNumber(float(item()?['AchievementPct']), 'N2'), '%</td><td>', formatNumber(float(item()?['VariancePct']), 'N2'), '%</td><td>', item()?['Status'], '</td></tr>')"
+			  },
+			  "runAfter": {
+				"ComputeOverallAchievement": [
+				  "Succeeded"
+				]
+			  }
+			},
+			"BuildReportTableHtml": {
+			  "type": "Compose",
+			  "inputs": "@concat('<html><body><h3>Daily Sales Report – ', formatDateTime(outputs('ComputeReportDate'), 'dd-MMM-yyyy'), ' (Overall Achievement: ', formatNumber(variables('OverallAchievementPct'), 'N2'), '%)</h3><table border=\"1\"><tr><th>Region</th><th>Sales ($)</th><th>Target ($)</th><th>Achievement %</th><th>Variance %</th><th>Status</th></tr>', join(body('SelectReportRows'), ''), '</table></body></html>')",
+			  "runAfter": {
+				"SelectReportRows": [
+				  "Succeeded"
+				]
+			  }
+			},
           "EvaluateCriticalPresence": {
             "type": "Compose",
             "inputs": "@variables('HasCritical')",
