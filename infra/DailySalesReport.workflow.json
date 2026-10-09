@@ -256,11 +256,23 @@
             "type": "Foreach",
             "foreach": "@body('SqlQuery_DailySalesSummary')?['resultsets']?['Table1']",
             "actions": {
-              "FindMatchingTarget": {
-                "type": "Compose",
-                "inputs": "@first(filter(body('SqlQuery_RegionSalesTargetLookup')?['resultsets']?['Table1'], item => equals(item?['Region'], items('ForEach_Region')?['Region'])))",
-                "runAfter": {}
-              },
+              "FilterTarget": {
+				  "type": "Query",
+				  "inputs": {
+					"from": "@body('SqlQuery_RegionSalesTargetLookup')?['resultsets']?['Table1']",
+					"where": "@equals(item()?['Region'], items('ForEach_Region')?['Region'])"
+				  },
+				  "runAfter": {}
+				},
+				"FindMatchingTarget": {
+				  "type": "Compose",
+				  "inputs": "@first(body('FilterTarget'))",
+				  "runAfter": {
+					"FilterTarget": [
+					  "Succeeded"
+					]
+				  }
+				},
               "ComputeRegionMetrics": {
                 "type": "Compose",
                 "inputs": {
