@@ -3,51 +3,36 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "logicAppName": {
-      "value": "PurchaseOrderProcessin"
+      "value": "DailySalesReport"
     },
     "location": {
-      "value": "eastus"
+      "value": ""
     },
     "sqlServerName": {
-      "value": "poc-purchaseorder-sql"
+      "value": "dummy.db.net"
     },
     "sqlDatabaseName": {
-      "value": "PurchaseOrderDb"
+      "value": "dummy.mysql"
     },
-    "vendorsTableName": {
-      "value": "dbo.Vendors"
+    "sqlUsername": {
+      "value": "john"
     },
-    "orderHeaderTableName": {
-      "value": "dbo.OrderHeader"
+    "sqlPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "12"
+        },
+        "secretName": "sqlpassword"
+      }
     },
-    "orderLineTableName": {
-      "value": "dbo.OrderLine"
+    "salesDistributionListEmail": {
+      "value": "sample@gmail.com"
     },
-    "errorLogTableName": {
-      "value": "ErrorLog"
+    "technicalAlertEmail": {
+      "value": "sample@gmail.com"
     },
-    "serviceBusNamespace": {
-      "value": "poc-purchaseorder-sb"
-    },
-    "fulfilmentQueueName": {
-      "value": "orders-to-fulfil"
-    },
-    "supportTeamEmail": {
-      "value": "support-team@contoso.com"
-    },
-    "procurementIpRanges": {
-      "value": [
-        "203.0.113.0/24"
-      ]
-    },
-    "approvalThreshold": {
-      "value": 10000
-    },
-    "approvalTimeout": {
-      "value": "PT24H"
-    },
-    "office365ConnectionAuthorization": {
-      "value": "PLACEHOLDER_NOT_A_REAL_TOKEN"
+    "senderMailbox": {
+      "value": "sample@gmail.com"
     }
   }
 }
