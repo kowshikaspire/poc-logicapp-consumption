@@ -6,7 +6,7 @@
       "value": "DailySalesReport"
     },
     "location": {
-      "value": ""
+      "value": "eastus"
     },
     "sqlServerName": {
       "value": "dummy.db.net"
