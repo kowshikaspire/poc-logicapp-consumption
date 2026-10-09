@@ -63,7 +63,7 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
   location: location
   properties: {
     state: 'Enabled'
-    definition: loadJsonContent('workflows/DailySalesReport.workflow.json')
+    definition: loadJsonContent('DailySalesReport.workflow.json')
     parameters: {
       '$connections': {
         value: {
