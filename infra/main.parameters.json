@@ -18,12 +18,7 @@
       "value": "john"
     },
     "sqlPassword": {
-      "reference": {
-        "keyVault": {
-          "id": "12"
-        },
-        "secretName": "sqlpassword"
-      }
+      "value":"********"
     },
     "salesDistributionListEmail": {
       "value": "sample@gmail.com"
